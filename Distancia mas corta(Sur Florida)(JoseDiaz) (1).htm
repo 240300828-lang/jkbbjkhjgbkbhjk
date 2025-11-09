@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruta más corta — Miami, Florida (Turquesa)</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* Título principal */
+    .header {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      z-index: 1200;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #0074D9;
+      font-weight: bold;
+    }
+
+    .header h2 {
+      margin: 5px 0 0;
+      font-size: 14px;
+      color: #333;
+      font-weight: normal;
+    }
+
+    /* Panel superior */
+    .control-panel {
+      position: absolute;
+      top: 90px;
+      left: 10px;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      font-size: 14px;
+      min-width: 180px;
+    }
+
+    .control-panel button {
+      background: #1abc9c;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .control-panel button:hover {
+      background: #16a085;
+    }
+
+    .control-panel span {
+      display: inline-block;
+      margin-top: 6px;
+      font-weight: bold;
+    }
+
+    /* Panel lateral (plegable) */
+    .sidebar {
+      position: absolute;
+      top: 90px;
+      right: 10px;
+      width: 220px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar-header {
+      background: #1abc9c;
+      color: white;
+      padding: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .sidebar-content {
+      display: none;
+      padding: 10px;
+    }
+
+    .sidebar-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sidebar-content li {
+      padding: 6px 0;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+
+    .sidebar-content li:hover {
+      background: #f1f1f1;
+    }
+
+    .times {
+      margin-top: 5px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado con título y subtítulo -->
+  <div class="header">
+    <h1>🌴 Busca la Ruta Óptima</h1>
+    <h2>Principales condados del sur de Florida</h2>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Panel superior -->
+  <div class="control-panel">
+    <button id="calcBtn">Calcular ruta</button><br>
+    <span>Distancia: <span id="distance">— km</span></span>
+    <div class="times">
+      🚗 Auto: <span id="carTime">—</span><br>
+      ✈️ Avión: <span id="planeTime">—</span><br>
+      🚶 A pie: <span id="walkTime">—</span>
+    </div>
+  </div>
+
+  <!-- Panel lateral plegable -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header" id="toggleSidebar">Condados del Sur de Florida ▼</div>
+    <div class="sidebar-content" id="sidebarContent">
+      <ul>
+        <li data-coords="25.7617,-80.1918">Miami-Dade County</li>
+        <li data-coords="26.1901,-80.3659">Broward County</li>
+        <li data-coords="26.7056,-80.0364">Palm Beach County</li>
+        <li data-coords="25.0865,-80.4473">Monroe County</li>
+        <li data-coords="26.1420,-81.7948">Collier County</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
+
+  <script>
+    // Inicializar mapa centrado en Miami
+    const map = L.map("map").setView([25.7617, -80.1918], 12);
+
+    // Capa base
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+
+    // Ícono turquesa
+    const turquoiseIcon = new L.Icon({
+      iconUrl:
+        "data:image/svg+xml;base64," +
+        btoa(` 
+        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 41'>
+          <path d='M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z' fill='#40E0D0'/>
+          <circle cx='12.5' cy='12.5' r='5.5' fill='#fff'/>
+        </svg>`),
+      shadowUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const redIcon = new L.Icon({
+      iconUrl:
+        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+      shadowUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    // Marcadores arrastrables
+    const startMarker = L.marker([25.7743, -80.1937], {
+      draggable: true,
+      icon: turquoiseIcon
+    }).addTo(map).bindPopup("Inicio (Turquesa)").openPopup();
+
+    const endMarker = L.marker([25.7906, -80.1300], {
+      draggable: true,
+      icon: redIcon
+    }).addTo(map).bindPopup("Destino (Rojo)").openPopup();
+
+    let routeLayer = null;
+
+    // Formato de tiempo
+    function formatTime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.round((seconds % 3600) / 60);
+      if (h > 0) return `${h}h ${m}min`;
+      return `${m}min`;
+    }
+
+    // Calcular ruta
+    async function calcularRuta() {
+      const start = startMarker.getLatLng();
+      const end = endMarker.getLatLng();
+      const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+
+      const btn = document.getElementById("calcBtn");
+      btn.textContent = "Calculando...";
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!data.routes || data.routes.length === 0) {
+          alert("No se encontró una ruta válida entre los puntos seleccionados.");
+          return;
+        }
+
+        const route = data.routes[0];
+        const distanciaKm = route.distance / 1000;
+        const duracionSeg = route.duration;
+
+        if (routeLayer) map.removeLayer(routeLayer);
+
+        // Color azul rey
+        routeLayer = L.geoJSON(route.geometry, {
+          style: { color: "#0047AB", weight: 5, opacity: 0.9 }
+        }).addTo(map);
+
+        document.getElementById("distance").textContent = `${distanciaKm.toFixed(2)} km`;
+
+        // Tiempos estimados
+        const carTime = formatTime(duracionSeg);
+        const planeTimeSec = (distanciaKm / 800) * 3600;
+        const walkTimeSec = (distanciaKm / 5) * 3600;
+
+        document.getElementById("carTime").textContent = carTime;
+        document.getElementById("planeTime").textContent = formatTime(planeTimeSec);
+        document.getElementById("walkTime").textContent = formatTime(walkTimeSec);
+
+        map.fitBounds(routeLayer.getBounds());
+      } catch (error) {
+        alert("Error al calcular la ruta: " + error.message);
+      } finally {
+        btn.textContent = "Calcular ruta";
+      }
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", calcularRuta);
+
+    // Panel plegable
+    const sidebarHeader = document.getElementById("toggleSidebar");
+    const sidebarContent = document.getElementById("sidebarContent");
+
+    sidebarHeader.addEventListener("click", () => {
+      const visible = sidebarContent.style.display === "block";
+      sidebarContent.style.display = visible ? "none" : "block";
+      sidebarHeader.textContent = visible
+        ? "Condados del Sur de Florida ▼"
+        : "Condados del Sur de Florida ▲";
+    });
+
+    // Mover mapa al hacer clic
+    document.querySelectorAll(".sidebar-content li").forEach(li => {
+      li.addEventListener("click", () => {
+        const [lat, lng] = li.dataset.coords.split(",");
+        map.setView([lat, lng], 10);
+      });
+    });
+  </script>
+</body>
+</html>
